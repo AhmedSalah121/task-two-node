@@ -1,0 +1,11 @@
+services:
+  postgres-db:
+    image: postgres:latest
+    container_name: potential-container
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: development
+    ports:
+      - "5432:5432"
