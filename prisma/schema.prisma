@@ -7,42 +7,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  User
+  Guest
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   username  String   @unique
-  token     String
+  password  String   // Hashed password
+  role      Role     @default(User)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  posts     Post[]
-  replies   Reply[]
+  discussions Discussion[]
+  operations  Operation[]
 }
 
-model Post {
-  id        String   @id @default(uuid())
-  content   String
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Discussion {
+  id            String      @id @default(uuid())
+  startingNumber Float      @unique // The initial number that starts the discussion - must be unique
+  authorId      String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
   
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  replies   Reply[]
+  author        User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  operations    Operation[] // All operations applied to this discussion tree
   
   @@index([authorId])
+  @@index([createdAt])
 }
 
-model Reply {
-  id        String   @id @default(uuid())
-  content   String
-  postId    String
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Operation {
+  id              String      @id @default(uuid())
+  discussionId    String      // Root discussion this operation belongs to
+  parentId        String?     // The operation this one responds to (null for first-level operations)
+  authorId        String
+  operationType   String      // "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE"
+  operand         Float       // The right-side number chosen by the user
+  result          Float       // The computed result: previous_result [operation] operand
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
   
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  discussion      Discussion  @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  parent          Operation?  @relation("OperationTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children        Operation[] @relation("OperationTree")
+  author          User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
   
-  @@index([postId])
+  @@index([discussionId])
+  @@index([parentId])
   @@index([authorId])
+  @@index([createdAt])
 }
